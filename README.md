@@ -74,8 +74,8 @@ Autenticacion/
 ### 2. Clonar el repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/django-auth-api.git
-cd django-auth-api
+git clone https://github.com/JesusAlbertoVeraPompa/Backend-Authentication-Django.git
+cd Autenticacion
 ```
 
 ### 3. Crear entorno virtual
