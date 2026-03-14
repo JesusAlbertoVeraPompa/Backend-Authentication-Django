@@ -96,6 +96,19 @@ class TestUserListView:
         assert response.status_code == 200
         assert "count" in response.data["data"]
         assert "results" in response.data["data"]
+        
+    def test_invalid_filter_returns_400(self, admin_client):
+        """Line 57 — invalid filter params return 400."""
+        from unittest.mock import patch, MagicMock
+
+        mock_filterset = MagicMock()
+        mock_filterset.is_valid.return_value = False
+        mock_filterset.errors = {"field": ["Error"]}
+
+        with patch("apps.users.views.UserFilter", return_value=mock_filterset):
+            response = admin_client.get("/api/v1/users/", format="json")
+
+        assert response.status_code == 400
 
 
 # ─────────────────────────────────────────
@@ -188,6 +201,15 @@ class TestUserDetailView:
         response = admin_client.get(detail_url(uuid.uuid4()))
         assert response.status_code == 404
 
+    def test_admin_update_user_invalid_data(self, admin_client, make_user):
+        """Line 142 — invalid PATCH data returns 400."""
+        user = make_user(email="patch_invalid@test.com")
+        response = admin_client.patch(
+            f"/api/v1/users/{user.id}/",
+            {"role": "RolInexistente"},
+            format="json",
+        )
+        assert response.status_code == 400
 
 # ─────────────────────────────────────────
 # DELETE USER

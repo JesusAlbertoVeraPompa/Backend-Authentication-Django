@@ -16,7 +16,12 @@ DATABASES = {
 # pytest-django con --nomigrations crea las tablas directamente desde los modelos
 
 # ── Contraseñas débiles OK en tests ───────────────────────────────────────────
-AUTH_PASSWORD_VALIDATORS = []
+# ✅ Mantener los validators activos en testing
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 # ── Email en memoria ──────────────────────────────────────────────────────────
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

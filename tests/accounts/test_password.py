@@ -18,7 +18,7 @@ CHANGE_URL = "/api/v1/auth/password/change/"
 @pytest.mark.django_db
 class TestPasswordResetRequestView:
 
-    @patch("apps.core.utils.send_password_reset_email", return_value=True)
+    @patch("apps.accounts.views.send_password_reset_email", return_value=True)
     def test_reset_request_known_email(self, mock_email, api_client, regular_user):
         """Requesting reset for a known email returns 200."""
         response = api_client.post(
@@ -28,7 +28,7 @@ class TestPasswordResetRequestView:
         assert response.data["success"] is True
         mock_email.assert_called_once_with(regular_user)
 
-    @patch("apps.core.utils.send_password_reset_email", return_value=True)
+    @patch("apps.accounts.views.send_password_reset_email", return_value=True)
     def test_reset_request_unknown_email(self, mock_email, api_client):
         """Requesting reset for unknown email also returns 200 (no enumeration)."""
         response = api_client.post(
@@ -44,13 +44,13 @@ class TestPasswordResetRequestView:
         )
         assert response.status_code == 400
 
-    @patch("apps.core.utils.send_password_reset_email", return_value=True)
+    @patch("apps.accounts.views.send_password_reset_email", return_value=True)
     def test_reset_creates_token(self, mock_email, api_client, regular_user):
         """A PasswordResetToken is created in the database."""
         api_client.post(RESET_URL, {"email": "regular@example.com"}, format="json")
         assert PasswordResetToken.objects.filter(user=regular_user).exists()
 
-    @patch("apps.core.utils.send_password_reset_email", return_value=True)
+    @patch("apps.accounts.views.send_password_reset_email", return_value=True)
     def test_reset_invalidates_previous_tokens(self, mock_email, api_client, regular_user):
         """Requesting reset a second time invalidates the first token."""
         api_client.post(RESET_URL, {"email": "regular@example.com"}, format="json")

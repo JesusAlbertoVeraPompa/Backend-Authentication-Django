@@ -48,7 +48,16 @@ def make_user(db):
 
 @pytest.fixture
 def regular_user(make_user):
-    return make_user(email="regular@example.com", role="Usuario")
+    from apps.accounts.models import User
+    user = User.objects.create_user(
+        email="regular@example.com",
+        password="StrongPass123!",
+        first_name="Test",
+        last_name="User",
+        is_verified=False,
+        is_active=True,
+    )
+    return user
 
 
 @pytest.fixture

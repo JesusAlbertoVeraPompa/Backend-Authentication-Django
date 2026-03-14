@@ -13,7 +13,7 @@ class UserManager(BaseUserManager):
     """
     Custom manager that uses email as the unique identifier
     instead of username.
-    """
+    """                                          # ← cierre del docstring
 
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -51,11 +51,9 @@ class User(AbstractUser):
         PERSONAL = "Personal", "Personal"
         USUARIO = "Usuario", "Usuario"
 
-    # Remove username; email is the unique identifier
     username = None
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # Core fields
     email = models.EmailField(unique=True, verbose_name="Correo electrónico")
     first_name = models.CharField(max_length=150, verbose_name="Nombre")
     last_name = models.CharField(max_length=150, verbose_name="Apellido")
@@ -64,7 +62,6 @@ class User(AbstractUser):
         max_length=20, blank=True, null=True, verbose_name="Número de teléfono"
     )
 
-    # Account state
     is_verified = models.BooleanField(default=False, verbose_name="Verificado")
     role = models.CharField(
         max_length=20,
@@ -73,7 +70,6 @@ class User(AbstractUser):
         verbose_name="Rol",
     )
 
-    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

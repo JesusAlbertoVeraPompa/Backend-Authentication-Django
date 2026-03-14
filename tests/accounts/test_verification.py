@@ -16,7 +16,7 @@ CONFIRM_URL = "/api/v1/auth/verify/confirm/"
 class TestSendVerificationCodeView:
     """Tests for sending the SMS verification code."""
 
-    @patch("apps.core.utils.send_sms_verification", return_value=True)
+    @patch("apps.accounts.views.send_sms_verification", return_value=True)
     def test_send_code_success(self, mock_sms, auth_client, regular_user):
         """Authenticated user with phone number can request a code."""
         regular_user.phone_number = "+573001234567"
@@ -29,7 +29,7 @@ class TestSendVerificationCodeView:
 
         assert VerificationCode.objects.filter(user=regular_user).exists()
 
-    @patch("apps.core.utils.send_sms_verification", return_value=True)
+    @patch("apps.accounts.views.send_sms_verification", return_value=True)
     def test_send_code_updates_phone(self, mock_sms, auth_client, regular_user):
         """User can provide a new phone number in the request."""
         response = auth_client.post(
@@ -39,7 +39,7 @@ class TestSendVerificationCodeView:
         regular_user.refresh_from_db()
         assert regular_user.phone_number == "+573009876543"
 
-    @patch("apps.core.utils.send_sms_verification", return_value=True)
+    @patch("apps.accounts.views.send_sms_verification", return_value=True)
     def test_resend_invalidates_old_code(self, mock_sms, auth_client, regular_user):
         """Re-sending marks previous codes as used."""
         regular_user.phone_number = "+573001234567"
@@ -67,7 +67,7 @@ class TestSendVerificationCodeView:
         response = api_client.post(SEND_URL, {}, format="json")
         assert response.status_code == 401
 
-    @patch("apps.core.utils.send_sms_verification", return_value=False)
+    @patch("apps.accounts.views.send_sms_verification", return_value=False)
     def test_sms_service_failure_returns_503(self, mock_sms, auth_client, regular_user):
         """If SMS service fails, return 503."""
         regular_user.phone_number = "+573001234567"
@@ -82,7 +82,7 @@ class TestSendVerificationCodeView:
             SEND_URL, {"phone_number": "3001234567"}, format="json"
         )
         assert response.status_code == 400
-
+    
 
 @pytest.mark.django_db
 class TestVerifyPhoneView:

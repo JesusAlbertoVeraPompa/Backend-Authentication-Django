@@ -65,20 +65,20 @@ Autenticacion/
 
 ## ⚙️ Instalación local
 
-### 1. Prerrequisitos
+### Prerrequisitos
 
 - Python 3.11+
 - MySQL 8.0+
 - Git
 
-### 2. Clonar el repositorio
+### Clonar el repositorio
 
 ```bash
 git clone https://github.com/JesusAlbertoVeraPompa/Backend-Authentication-Django.git
 cd Autenticacion
 ```
 
-### 3. Crear entorno virtual
+### Crear entorno virtual
 
 ```bash
 python -m venv venv
@@ -86,13 +86,22 @@ source venv/bin/activate        # Linux/Mac
 venv\Scripts\activate           # Windows
 ```
 
-### 4. Instalar dependencias
+### Instalar dependencias
 
 ```bash
 pip install -r requirements.txt
 ```
+```bash
+pip install django-extensions
+```
+```bash
+pip install cryptography
+```
+```bash
+pip install pytest-cov
+```
 
-### 5. Crear base de datos MySQL
+### Crear base de datos MySQL
 
 ```sql
 CREATE DATABASE django_auth_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -101,7 +110,7 @@ GRANT ALL PRIVILEGES ON django_auth_db.* TO 'django_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-### 6. Configurar variables de entorno
+### Configurar variables de entorno
 
 ```bash
 cp .env.example .env
@@ -109,25 +118,62 @@ cp .env.example .env
 
 Edita `.env` con tus valores (ver sección [Variables de entorno](#variables-de-entorno)).
 
-### 7. Ejecutar migraciones
+### Ejecutar migraciones
 
 ```bash
 python manage.py migrate
 ```
 
-### 8. Crear grupos de roles
+### Crear grupos de roles
 
 ```bash
 python manage.py seed_roles
 ```
 
-### 9. Crear superusuario
+### Crear superusuario
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 10. Iniciar servidor
+## 🧪 Tests
+
+### Ejecutar todos los tests
+
+```bash
+pytest
+```
+
+### Con cobertura
+
+```bash
+pytest --cov=apps --cov-report=html
+# Abre htmlcov/index.html en el navegador
+```
+
+### Tests específicos
+
+```bash
+# Solo tests de registro
+pytest tests/accounts/test_register.py -v
+
+# Solo tests de login
+pytest tests/accounts/test_login.py -v
+
+# Solo tests de usuarios
+pytest tests/users/test_users.py -v
+
+# Tests de un módulo con keyword
+pytest -k "test_admin_can"
+```
+
+### Tests con unittest
+
+```bash
+python manage.py test tests --verbosity=2
+```
+
+### Iniciar servidor
 
 ```bash
 python manage.py runserver
@@ -300,45 +346,6 @@ curl -X POST http://localhost:8000/api/v1/auth/verify/confirm/ \
   "message": "Error al procesar la solicitud.",
   "errors": { "email": ["Este campo es requerido."] }
 }
-```
-
----
-
-## 🧪 Tests
-
-### Ejecutar todos los tests
-
-```bash
-pytest
-```
-
-### Con cobertura
-
-```bash
-pytest --cov=apps --cov-report=html
-# Abre htmlcov/index.html en el navegador
-```
-
-### Tests específicos
-
-```bash
-# Solo tests de registro
-pytest tests/accounts/test_register.py -v
-
-# Solo tests de login
-pytest tests/accounts/test_login.py -v
-
-# Solo tests de usuarios
-pytest tests/users/test_users.py -v
-
-# Tests de un módulo con keyword
-pytest -k "test_admin_can"
-```
-
-### Tests con unittest
-
-```bash
-python manage.py test tests --verbosity=2
 ```
 
 ---
