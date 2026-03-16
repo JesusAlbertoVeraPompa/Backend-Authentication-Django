@@ -9,6 +9,7 @@ from django.db import models
 from django.utils import timezone
 
 
+
 class UserManager(BaseUserManager):
     """
     Custom manager that uses email as the unique identifier
@@ -28,7 +29,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("is_verified", True)
+        extra_fields.setdefault("email_verified", True)
 
         if not extra_fields.get("is_staff"):
             raise ValueError("El superusuario debe tener is_staff=True.")
@@ -62,7 +63,9 @@ class User(AbstractUser):
         max_length=20, blank=True, null=True, verbose_name="Número de teléfono"
     )
 
-    is_verified = models.BooleanField(default=False, verbose_name="Verificado")
+    phone_verified = models.BooleanField(default=False, verbose_name="Teléfono verificado")
+    email_verified = models.BooleanField(default=False, verbose_name="Email verificado")
+    
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
@@ -99,6 +102,10 @@ class User(AbstractUser):
         self.groups.add(group)
         self.role = role_name
         self.save(update_fields=["role"])
+        
+    @property
+    def is_verified(self):
+        return self.phone_verified and self.email_verified
 
 
 # ─────────────────────────────────────────
@@ -119,6 +126,7 @@ class VerificationCode(models.Model):
         verbose_name="Usuario",
     )
     code = models.CharField(max_length=10, verbose_name="Código")
+    attempts = models.IntegerField(default=0)
     is_used = models.BooleanField(default=False, verbose_name="Usado")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -138,7 +146,37 @@ class VerificationCode(models.Model):
     @property
     def is_valid(self) -> bool:
         return not self.is_used and not self.is_expired
+    
 
+# ─────────────────────────────────────────
+# EMAIL VERIFICATION CODE
+# ─────────────────────────────────────────
+
+class EmailVerificationToken(models.Model):
+    """
+    Token de verificación por email.
+    """
+
+    EXPIRY_HOURS = 24
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="email_verifications",
+    )
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_expired(self):
+        expiry = self.created_at + timedelta(hours=self.EXPIRY_HOURS)
+        return timezone.now() > expiry
+
+    @property
+    def is_valid(self):
+        return not self.is_used and not self.is_expired
 
 # ─────────────────────────────────────────
 # PASSWORD RESET TOKEN

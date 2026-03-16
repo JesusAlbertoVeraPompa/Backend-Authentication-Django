@@ -6,25 +6,61 @@ from .models import PasswordResetToken, User, VerificationCode
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ("email", "full_name", "role", "is_verified", "is_active", "created_at")
-    list_filter = ("role", "is_verified", "is_active", "groups")
+
+    list_display = (
+        "email",
+        "full_name",
+        "role",
+        "is_active",
+        "created_at",
+    )
+
+    list_filter = (
+        "role",
+        "is_active",
+        "groups",
+    )
+
     search_fields = ("email", "first_name", "last_name")
+
     ordering = ("-created_at",)
+
     readonly_fields = ("id", "created_at", "updated_at", "last_login")
 
     fieldsets = (
         ("Credenciales", {"fields": ("id", "email", "password")}),
-        ("Información personal", {"fields": ("first_name", "last_name", "birth_date", "phone_number")}),
-        ("Estado", {"fields": ("is_active", "is_verified", "role")}),
-        ("Permisos", {"fields": ("is_staff", "is_superuser", "groups", "user_permissions")}),
-        ("Fechas", {"fields": ("last_login", "created_at", "updated_at")}),
+
+        ("Información personal", {
+            "fields": ("first_name", "last_name", "birth_date", "phone_number")
+        }),
+
+        ("Estado", {
+            "fields": ("is_active", "role")
+        }),
+
+        ("Permisos", {
+            "fields": ("is_staff", "is_superuser", "groups", "user_permissions")
+        }),
+
+        ("Fechas", {
+            "fields": ("last_login", "created_at", "updated_at")
+        }),
     )
 
     add_fieldsets = (
-        (None, {
-            "classes": ("wide",),
-            "fields": ("email", "first_name", "last_name", "password1", "password2"),
-        }),
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "email",
+                    "first_name",
+                    "last_name",
+                    "password1",
+                    "password2",
+                ),
+            },
+        ),
     )
 
 

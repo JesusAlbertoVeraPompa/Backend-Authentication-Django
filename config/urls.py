@@ -15,7 +15,7 @@ urlpatterns = [
     path("api/v1/users/", include("apps.users.urls", namespace="users")),
 
     # Social auth (allauth)
-    path("accounts/", include("allauth.urls")),
+    path("accounts/", include("allauth.socialaccount.urls")),
 ]
 
 # Serve media files in development

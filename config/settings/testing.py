@@ -44,3 +44,18 @@ DEBUG = True
 
 # ── Desactivar WhiteNoise en tests ────────────────────────────────────────────
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+    "anon": "10000/min",
+    "user": "10000/min",
+    "login": "10000/min",
+    "verify": "10000/min",
+    "social": "10000/min",        # ← faltaba
+    "password_reset": "10000/min", # ← faltaba
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+    }
+}

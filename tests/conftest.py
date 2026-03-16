@@ -7,9 +7,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-# ─────────────────────────────────────────
-# GROUPS / ROLES
-# ─────────────────────────────────────────
+# ─── GROUPS / ROLES ──────────────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
 def create_groups(db):
@@ -18,9 +16,7 @@ def create_groups(db):
         Group.objects.get_or_create(name=name)
 
 
-# ─────────────────────────────────────────
-# USER FACTORIES
-# ─────────────────────────────────────────
+# ─── USER FACTORIES ───────────────────────────────────────────────────────────
 
 @pytest.fixture
 def make_user(db):
@@ -32,29 +28,44 @@ def make_user(db):
     """
     from apps.accounts.models import User
 
+    # ─── CORRECCIÓN 4: make_user pasaba is_verified=True como kwarg ──
+    # BUG: User.objects.create_user(**kwargs) recibía is_verified=True
+    #      pero `is_verified` es una @property calculada (no un campo de BD),
+    #      por lo que Django lanzaba TypeError al intentar asignarlo en
+    #      Model.__init__. Fallaba silenciosamente en algunos entornos o
+    #      rompía tests que usaban make_user() con defaults.
+    # CORRECCIÓN: Se elimina is_verified de los defaults del factory.
+    #             Si un test necesita un usuario verificado, debe setear
+    #             phone_verified=True y email_verified=True explícitamente.
     def _factory(**kwargs):
         kwargs.setdefault("email", "user@example.com")
         kwargs.setdefault("first_name", "Test")
         kwargs.setdefault("last_name", "User")
-        kwargs.setdefault("password", "StrongPass123!")
-        kwargs.setdefault("is_verified", True)
         kwargs.setdefault("role", "Usuario")
-        password = kwargs.pop("password")
+        is_verified = kwargs.pop("is_verified", None)  # extraer antes
+        password = kwargs.pop("password", "StrongPass123!")
         user = User.objects.create_user(password=password, **kwargs)
+        if is_verified is True:
+            user.phone_verified = True
+            user.email_verified = True
+            user.save(update_fields=["phone_verified", "email_verified"])
+        elif is_verified is False:
+            user.phone_verified = False
+            user.email_verified = False
+            user.save(update_fields=["phone_verified", "email_verified"])
         return user
 
     return _factory
 
 
 @pytest.fixture
-def regular_user(make_user):
+def regular_user(db):
     from apps.accounts.models import User
     user = User.objects.create_user(
         email="regular@example.com",
         password="StrongPass123!",
         first_name="Test",
         last_name="User",
-        is_verified=False,
         is_active=True,
     )
     return user
@@ -87,9 +98,7 @@ def superuser(db):
     )
 
 
-# ─────────────────────────────────────────
-# API CLIENTS
-# ─────────────────────────────────────────
+# ─── API CLIENTS ──────────────────────────────────────────────────────────────
 
 @pytest.fixture
 def api_client():

@@ -381,10 +381,6 @@ class TestGenerateNumericCode:
 @pytest.mark.django_db
 class TestSendSmsVerification:
 
-    # ✅ CORRECCIÓN: "twilio.rest.Client" porque Client se importa DENTRO
-    # de la función con "from twilio.rest import Client", por lo tanto
-    # NO existe como atributo en apps.core.utils — hay que parchear
-    # el original en su módulo fuente.
     @patch("twilio.rest.Client")
     def test_returns_true_on_success(self, mock_client):
         from apps.core.utils import send_sms_verification
@@ -405,17 +401,26 @@ class TestSendSmsVerification:
 @pytest.mark.django_db
 class TestSendPasswordResetEmail:
 
+    # CORRECCIÓN: send_password_reset_email(user, reset_token) requiere dos
+    # argumentos. Los tests anteriores solo pasaban `user` → TypeError.
+    # Se crea un PasswordResetToken real antes de llamar la función.
     def test_returns_true_on_success(self, make_user):
         from apps.core.utils import send_password_reset_email
+        from apps.accounts.models import PasswordResetToken
+
         user = make_user(email="resetmail@test.com")
-        result = send_password_reset_email(user)
+        reset_token = PasswordResetToken.objects.create(user=user)
+        result = send_password_reset_email(user, reset_token)
         assert result is True
 
     @patch("apps.core.utils.send_mail", side_effect=Exception("SMTP error"))
     def test_returns_false_on_exception(self, mock_mail, make_user):
         from apps.core.utils import send_password_reset_email
+        from apps.accounts.models import PasswordResetToken
+
         user = make_user(email="failreset@test.com")
-        result = send_password_reset_email(user)
+        reset_token = PasswordResetToken.objects.create(user=user)
+        result = send_password_reset_email(user, reset_token)
         assert result is False
 
 
@@ -434,6 +439,7 @@ class TestSendWelcomeEmail:
         user = make_user(email="failwelcome@test.com")
         result = send_welcome_email(user)
         assert result is False
+
 
 @pytest.mark.django_db
 class TestCustomPagination:

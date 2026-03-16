@@ -8,6 +8,7 @@ Serializers for authentication flows:
 """
 import logging
 from datetime import date
+import re
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group
@@ -140,9 +141,12 @@ class SendVerificationCodeSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20, required=False)
 
     def validate_phone_number(self, value):
-        if value and not value.startswith("+"):
+        if not value:
+            return value
+        pattern = r'^\+[1-9]\d{7,14}$'  # E.164 internacional
+        if not re.match(pattern, value):
             raise serializers.ValidationError(
-                "El número debe estar en formato internacional (ej: +573001234567)."
+                "Formato inválido. Usa formato internacional: +573001234567 (8-15 dígitos)"
             )
         return value
 
@@ -274,8 +278,7 @@ class SocialLoginSerializer(serializers.Serializer):
             # Use allauth to validate token and get/create user
             from allauth.socialaccount.helpers import complete_social_login
             from allauth.socialaccount.models import SocialToken, SocialApp
-            from django.test import RequestFactory
-
+            
             # Build a minimal request for allauth
             request = self.context.get("request")
             adapter = AdapterClass(request)
@@ -299,11 +302,13 @@ class SocialLoginSerializer(serializers.Serializer):
                     "No se pudo autenticar con el proveedor social."
                 )
 
+        except serializers.ValidationError:
+            raise 
+        except SocialApp.DoesNotExist:
+            raise serializers.ValidationError("Proveedor social no configurado.")
         except Exception as exc:
             logger.error("Social login error [%s]: %s", provider, exc)
-            raise serializers.ValidationError(
-                "Token social inválido o autenticación fallida."
-            )
+            raise serializers.ValidationError("Token social inválido o autenticación fallida.")
 
         return attrs
 

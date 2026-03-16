@@ -3,6 +3,7 @@ Serializers for user management (CRUD, role assignment, profile).
 """
 from django.contrib.auth.models import Group
 from rest_framework import serializers
+import re
 
 from apps.accounts.models import User
 
@@ -63,9 +64,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         fields = ["first_name", "last_name", "birth_date", "phone_number"]
 
     def validate_phone_number(self, value):
-        if value and not value.startswith("+"):
+        if not value:
+            return value
+        pattern = r'^\+[1-9]\d{7,14}$'  # E.164 internacional
+        if not re.match(pattern, value):
             raise serializers.ValidationError(
-                "El número debe estar en formato internacional (ej: +573001234567)."
+                "Formato inválido. Usa formato internacional: +573001234567 (8-15 dígitos)"
             )
         return value
 

@@ -6,7 +6,7 @@ POST /api/v1/auth/password/change/
 """
 import uuid
 import pytest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from apps.accounts.models import PasswordResetToken
 
@@ -26,7 +26,7 @@ class TestPasswordResetRequestView:
         )
         assert response.status_code == 200
         assert response.data["success"] is True
-        mock_email.assert_called_once_with(regular_user)
+        mock_email.assert_called_once_with(regular_user, ANY)
 
     @patch("apps.accounts.views.send_password_reset_email", return_value=True)
     def test_reset_request_unknown_email(self, mock_email, api_client):

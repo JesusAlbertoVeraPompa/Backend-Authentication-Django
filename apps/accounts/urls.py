@@ -15,6 +15,7 @@ from .views import (
     SendVerificationCodeView,
     SocialLoginView,
     VerifyPhoneView,
+    VerifyEmailView
 )
 
 app_name = "accounts"
@@ -34,6 +35,9 @@ urlpatterns = [
     # ── Phone Verification ────────────────────────────
     path("verify/send/", SendVerificationCodeView.as_view(), name="verify-send"),
     path("verify/confirm/", VerifyPhoneView.as_view(), name="verify-confirm"),
+    
+    # ── Email Verification ────────────────────────────
+    path("verify/email/<uuid:token>/", VerifyEmailView.as_view(), name="verify-email"),
 
     # ── Password Management ───────────────────────────
     path("password/reset/", PasswordResetRequestView.as_view(), name="password-reset"),
