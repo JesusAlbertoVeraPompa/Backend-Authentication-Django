@@ -16,8 +16,6 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
-# Email via SMTP in production
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 # Logging to file/service in production
 LOGGING = {

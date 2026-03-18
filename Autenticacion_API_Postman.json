@@ -1,0 +1,883 @@
+{
+  "info": {
+    "name": "Autenticacion API v1",
+    "description": "Colección completa para probar todos los endpoints antes de producción.\n\n**Flujo recomendado:**\n1. Ejecuta 'Register' → copia el email\n2. Ejecuta 'Login' → los tokens se guardan automáticamente\n3. Usa cualquier endpoint protegido sin copiar nada manualmente\n\nLas variables {{access_token}}, {{refresh_token}} y {{user_id}} se llenan solas con los scripts de los requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000/api/v1", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "reset_token", "value": "", "type": "string" },
+    { "key": "email_verify_token", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "🔐 AUTH — Registro y Login",
+      "item": [
+        {
+          "name": "01 · Register (crear cuenta)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('success true', () => pm.expect(r.success).to.be.true);",
+                  "pm.test('data.email existe', () => pm.expect(r.data.email).to.exist);",
+                  "if (r.data && r.data.id) { pm.collectionVariables.set('user_id', r.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"first_name\": \"Juan\",\n  \"last_name\": \"Pérez\",\n  \"birth_date\": \"1995-06-15\",\n  \"phone_number\": \"+573001234567\",\n  \"password\": \"SecurePass123!\",\n  \"password_confirm\": \"SecurePass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "01b · Register — email duplicado (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"first_name\": \"Juan\",\n  \"last_name\": \"Pérez\",\n  \"password\": \"SecurePass123!\",\n  \"password_confirm\": \"SecurePass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "01c · Register — contraseñas no coinciden (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "const r = pm.response.json();",
+                  "pm.test('error en password_confirm', () => pm.expect(r.errors).to.have.property('password_confirm'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"otro@example.com\",\n  \"first_name\": \"Ana\",\n  \"last_name\": \"García\",\n  \"password\": \"SecurePass123!\",\n  \"password_confirm\": \"OtraPass456!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "02 · Login ✅ (guarda tokens automáticamente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('access token existe', () => pm.expect(r.data.access).to.exist);",
+                  "pm.test('refresh token existe', () => pm.expect(r.data.refresh).to.exist);",
+                  "pm.test('user info completa', () => {",
+                  "  const u = r.data.user;",
+                  "  pm.expect(u.id).to.exist;",
+                  "  pm.expect(u.email).to.exist;",
+                  "  pm.expect(u.role).to.exist;",
+                  "});",
+                  "pm.collectionVariables.set('access_token', r.data.access);",
+                  "pm.collectionVariables.set('refresh_token', r.data.refresh);",
+                  "pm.collectionVariables.set('user_id', r.data.user.id);",
+                  "console.log('✅ Tokens guardados. user_id:', r.data.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "02b · Login — credenciales incorrectas (debe dar 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                  "pm.test('success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"ContraseñaWrong!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "03 · Refresh token (obtener nuevo access)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('nuevo access token', () => pm.expect(r.access).to.exist);",
+                  "if (r.access) { pm.collectionVariables.set('access_token', r.access); }",
+                  "console.log('✅ Access token renovado');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/token/refresh/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "04 · Logout (invalida refresh token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                  "console.log('⚠️  Refresh token invalidado. Haz Login de nuevo para continuar.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/logout/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📱 VERIFICACIÓN — Teléfono y Email",
+      "item": [
+        {
+          "name": "05 · Enviar código SMS al teléfono",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                  "console.log('📱 Revisa tu teléfono o los logs de Twilio para obtener el código.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/verify/send/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"+573001234567\"\n}"
+            }
+          }
+        },
+        {
+          "name": "05b · Enviar código SMS — teléfono nuevo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/verify/send/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"+573009876543\"\n}"
+            }
+          }
+        },
+        {
+          "name": "06 · Confirmar código SMS ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Teléfono verificado', () => pm.expect(pm.response.json().success).to.be.true);",
+                  "console.log('⚠️  Si el código expiró o es incorrecto, recibirás 400. Reenvía con el endpoint 05.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/verify/confirm/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "06b · Confirmar código SMS — código incorrecto (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/verify/confirm/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"000000\"\n}"
+            }
+          }
+        },
+        {
+          "name": "07 · Verificar Email (con token del correo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "console.log('📧 Copia el token UUID del correo recibido y pégalo en la URL.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/auth/verify/email/{{email_verify_token}}/",
+            "description": "Reemplaza {{email_verify_token}} con el UUID que llegó al correo, o setea la variable en la colección."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 CONTRASEÑA — Reset y Cambio",
+      "item": [
+        {
+          "name": "08 · Solicitar reset de contraseña (envía email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Mensaje genérico (anti-enumeración)', () => {",
+                  "  const msg = pm.response.json().message;",
+                  "  pm.expect(msg).to.include('Si el correo existe');",
+                  "});",
+                  "console.log('📧 Si el email existe, revisa el buzón. El token llega en el link del correo.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/password/reset/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "08b · Solicitar reset — email desconocido (debe dar 200 igual)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 (anti-enumeración)', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/password/reset/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"noexiste@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "09 · Confirmar reset de contraseña (con token del email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contraseña restablecida', () => pm.expect(pm.response.json().success).to.be.true);",
+                  "console.log('✅ Contraseña cambiada. Usa Login con la nueva contraseña.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/password/reset/confirm/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"password\": \"NuevaPass456!\",\n  \"password_confirm\": \"NuevaPass456!\"\n}"
+            },
+            "description": "Pega el UUID que llegó en el link del correo como valor de reset_token en las variables de colección."
+          }
+        },
+        {
+          "name": "09b · Confirmar reset — token inválido (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/password/reset/confirm/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"00000000-0000-0000-0000-000000000000\",\n  \"password\": \"NuevaPass456!\",\n  \"password_confirm\": \"NuevaPass456!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "10 · Cambiar contraseña (usuario autenticado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                  "console.log('⚠️  Todos los tokens fueron invalidados. Haz Login de nuevo.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/password/change/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"SecurePass123!\",\n  \"new_password\": \"OtraPass789!\",\n  \"new_password_confirm\": \"OtraPass789!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "10b · Cambiar contraseña — actual incorrecta (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/password/change/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"ContraseñaWrong!\",\n  \"new_password\": \"OtraPass789!\",\n  \"new_password_confirm\": \"OtraPass789!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 PERFIL — Usuario propio",
+      "item": [
+        {
+          "name": "11 · Ver mi perfil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('campos obligatorios', () => {",
+                  "  ['id','email','first_name','last_name','role','is_verified'].forEach(f => {",
+                  "    pm.expect(d).to.have.property(f);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/me/"
+          }
+        },
+        {
+          "name": "12 · Actualizar mi perfil (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('first_name actualizado', () => pm.expect(d.first_name).to.eql('Carlos'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/users/me/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Carlos\",\n  \"last_name\": \"Rodríguez\",\n  \"phone_number\": \"+573001234567\"\n}"
+            }
+          }
+        },
+        {
+          "name": "12b · Actualizar perfil — teléfono sin + (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 — formato inválido', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/users/me/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"3001234567\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 USUARIOS — Gestión admin",
+      "item": [
+        {
+          "name": "13 · Listar usuarios (requiere Admin o Personal)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('paginación correcta', () => {",
+                  "  pm.expect(d).to.have.property('count');",
+                  "  pm.expect(d).to.have.property('results');",
+                  "  pm.expect(d.results).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/"
+          }
+        },
+        {
+          "name": "13b · Listar — filtrar por role=Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const results = pm.response.json().data.results;",
+                  "pm.test('Solo usuarios Admin', () => {",
+                  "  results.forEach(u => pm.expect(u.role).to.eql('Admin'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/?role=Admin",
+              "query": [{ "key": "role", "value": "Admin" }]
+            }
+          }
+        },
+        {
+          "name": "13c · Listar — filtrar por is_verified=true",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const results = pm.response.json().data.results;",
+                  "pm.test('Solo usuarios verificados', () => {",
+                  "  results.forEach(u => pm.expect(u.is_verified).to.be.true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/?is_verified=true",
+              "query": [{ "key": "is_verified", "value": "true" }]
+            }
+          }
+        },
+        {
+          "name": "13d · Listar — búsqueda por nombre o email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/?search=juan",
+              "query": [{ "key": "search", "value": "juan" }]
+            }
+          }
+        },
+        {
+          "name": "13e · Listar — paginación (page=1&page_size=2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('max 2 resultados', () => pm.expect(d.results.length).to.be.at.most(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/?page=1&page_size=2",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "2" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "14 · Ver detalle de un usuario por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('email presente', () => pm.expect(pm.response.json().data.email).to.exist);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/{{user_id}}/"
+          }
+        },
+        {
+          "name": "14b · Ver detalle — UUID inexistente (debe dar 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/00000000-0000-0000-0000-000000000000/"
+          }
+        },
+        {
+          "name": "15 · Actualizar usuario por ID (Admin — PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('first_name actualizado', () => pm.expect(pm.response.json().data.first_name).to.eql('NuevoNombre'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/users/{{user_id}}/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"NuevoNombre\",\n  \"is_active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "15b · Actualizar usuario — rol inválido (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error en role', () => pm.expect(pm.response.json().errors).to.have.property('role'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/users/{{user_id}}/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"SuperHacker\"\n}"
+            }
+          }
+        },
+        {
+          "name": "16 · Asignar rol a un usuario (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('role asignado', () => pm.expect(d.role).to.eql('Personal'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/users/{{user_id}}/assign-role/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Personal\"\n}"
+            }
+          }
+        },
+        {
+          "name": "16b · Asignar rol — rol inválido (debe dar 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/users/{{user_id}}/assign-role/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"RolFalso\"\n}"
+            }
+          }
+        },
+        {
+          "name": "17 · Desactivar (soft-delete) usuario (Admin — DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                  "console.log('⚠️  El usuario fue desactivado (is_active=false), no eliminado de la BD.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/users/{{user_id}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚫 SEGURIDAD — Tests de acceso no autorizado",
+      "item": [
+        {
+          "name": "18 · Sin token — debe dar 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 sin token', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/users/me/"
+          }
+        },
+        {
+          "name": "19 · Token expirado/inválido — debe dar 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 token inválido', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "token.invalido.aqui", "type": "string" }]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/users/me/"
+          }
+        },
+        {
+          "name": "20 · Usuario sin rol Admin intenta listar usuarios — debe dar 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 o 403 (usuario regular)', () => {",
+                  "  pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});",
+                  "console.log('ℹ️  Este test requiere que el token actual sea de un usuario con rol Usuario.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/",
+            "description": "Este request usa el token de la colección. Si el usuario logueado es Admin pasará 200. Para ver el 403, loguéate con un usuario de rol Usuario."
+          }
+        }
+      ]
+    }
+  ]
+}

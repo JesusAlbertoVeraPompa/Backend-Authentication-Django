@@ -1,5 +1,15 @@
 """
-Base settings shared across all environments.
+base.py — Configuración base compartida por todos los entornos.
+
+Correcciones de seguridad aplicadas:
+  [FIX-A1] DEFAULT_THROTTLE_RATES: se añaden los scopes "social" y "password_reset"
+           que estaban declarados en las vistas pero ausentes aquí, lo que hacía
+           que esos endpoints operaran sin límite de velocidad real.
+  [FIX-A2] CORS_ALLOWED_ORIGINS: se añade cast=Csv() para que el valor leído de
+           la variable de entorno sea una lista, no un string. django-cors-headers
+           itera el setting y con un string procesa carácter a carácter.
+  [FIX-A3] JWT ACCESS_TOKEN_LIFETIME: el valor por defecto se reduce de 60 a 15
+           minutos para limitar la ventana de uso después de logout o desactivación.
 """
 import os
 from datetime import timedelta
@@ -175,10 +185,20 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
+        # Límites globales para usuarios anónimos y autenticados
         "anon": "20/min",
         "user": "100/min",
-        "login": "5/min",
-        "verify": "5/min",
+
+        # Scopes específicos por endpoint sensible.
+        # IMPORTANTE: cada scope declarado con throttle_scope en una vista
+        # DEBE estar definido aquí; de lo contrario DRF falla silenciosamente
+        # y el endpoint queda sin límite de velocidad real.
+
+        # [FIX-A1] "social" y "password_reset" estaban ausentes — se añaden.
+        "login":          "5/min",   # LoginView
+        "verify":         "5/min",   # VerifyPhoneView
+        "social":         "10/h",    # SocialLoginView       ← NUEVO
+        "password_reset": "5/h",     # PasswordResetRequestView ← NUEVO
     },
 }
 
@@ -186,8 +206,14 @@ REST_FRAMEWORK = {
 # JWT CONFIGURATION
 # ─────────────────────────────────────────
 SIMPLE_JWT = {
+    # [FIX-A3] El valor por defecto se reduce de 60 a 15 minutos.
+    # Un access token de 60 min significa que después de un logout forzado,
+    # cambio de contraseña o desactivación del usuario, el token sigue siendo
+    # válido hasta 60 min. Con 15 min la ventana de riesgo es mucho menor.
+    # Si se necesita sesión larga, el refresh token (7 días) es el mecanismo.
+    # Configurable por entorno con la variable JWT_ACCESS_TOKEN_LIFETIME_MINUTES.
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=config("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=60, cast=int)
+        minutes=config("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=15, cast=int)
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
         days=config("JWT_REFRESH_TOKEN_LIFETIME_DAYS", default=7, cast=int)
@@ -251,10 +277,7 @@ REST_AUTH = {
 # ─────────────────────────────────────────
 # EMAIL
 # ─────────────────────────────────────────
-EMAIL_BACKEND = config(
-    "EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
-)
+EMAIL_BACKEND = config("EMAIL_BACKEND")
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
@@ -277,9 +300,17 @@ FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 # ─────────────────────────────────────────
 # CORS
 # ─────────────────────────────────────────
+
+# [FIX-A2] Se añade cast=Csv() para que el valor leído de la variable de
+# entorno sea una lista Python, no un string.
+# Sin cast=Csv(), django-cors-headers itera el string carácter a carácter
+# y produce orígenes inválidos como "h", "t", "t", "p"...
+# Con cast=Csv(), "http://localhost:3000,http://localhost:8080" se convierte
+# correctamente en ["http://localhost:3000", "http://localhost:8080"].
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://127.0.0.1:8000",
+    cast=Csv(),  # ← CORRECCIÓN: parsea la variable de entorno como lista
 )
 CORS_ALLOW_CREDENTIALS = False
 
